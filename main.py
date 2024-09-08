@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog
+from tkinterdnd2 import TkinterDnD, DND_FILES
 from PIL import Image, ImageFilter
 import os
 
@@ -63,21 +64,28 @@ def mosaic_images(file_paths, block_size):
             print(f"Error processing {file_path}: {e}")
 
 
-def open_files(blur_strength, block_size, process_type):
+def open_files(blur_strength, block_size, process_type, file_paths=None):
     """ファイル選択ダイアログを開いて、画像ファイルを選択する"""
-    file_paths = filedialog.askopenfilenames(
-        title="画像ファイルを選択してください",
-        filetypes=[("Image files", "*.jpg;*.jpeg;*.png;*.bmp;*.tiff")]
-    )
+    if not file_paths:
+        file_paths = filedialog.askopenfilenames(
+            title="画像ファイルを選択してください",
+            filetypes=[("Image files", "*.jpg;*.jpeg;*.png;*.bmp;*.tiff")]
+        )
     if process_type == "blur":
         blur_images(file_paths, blur_strength)
     elif process_type == "mosaic":
         mosaic_images(file_paths, block_size)
 
 
+def drop(event, blur_strength, block_size, process_type):
+    """ドラッグアンドドロップされたファイルを処理する"""
+    file_paths = event.data.split()
+    open_files(blur_strength, block_size, process_type, file_paths)
+
+
 def create_gui():
     """GUIを作成して表示する"""
-    root = tk.Tk()
+    root = TkinterDnD.Tk()
     root.title("画像処理ツール")
 
     # ウィンドウサイズを設定
@@ -105,6 +113,11 @@ def create_gui():
     # 画像選択ボタン
     tk.Button(root, text="画像を選択", command=lambda: open_files(
         blur_strength.get(), block_size.get(), process_type.get())).pack(expand=True)
+
+    # ドラッグアンドドロップの設定
+    root.drop_target_register(DND_FILES)
+    root.dnd_bind('<<Drop>>', lambda event: drop(
+        event, blur_strength.get(), block_size.get(), process_type.get()))
 
     # GUIのメインループを開始
     root.mainloop()
