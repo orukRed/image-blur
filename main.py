@@ -1,7 +1,7 @@
 from PIL import Image, ImageFilter
 import os
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 from tkinterdnd2 import TkinterDnD, DND_FILES
 
 
@@ -104,12 +104,14 @@ def open_files(blur_strength, block_size, resize_percentage, process_type, file_
         else:
             all_files.append(path)
 
-    if process_type == "blur":
-        blur_images(all_files, blur_strength)
-    elif process_type == "mosaic":
-        mosaic_images(all_files, block_size)
-    elif process_type == "resize":
-        resize_images(all_files, resize_percentage)
+    # 確認ダイアログを表示
+    if messagebox.askyesno("確認", "破壊的な処理だけど実行する？バックアップとった？"):
+        if process_type == "blur":
+            blur_images(all_files, blur_strength)
+        elif process_type == "mosaic":
+            mosaic_images(all_files, block_size)
+        elif process_type == "resize":
+            resize_images(all_files, resize_percentage)
 
 
 def drop(event, blur_strength, block_size, resize_percentage, process_type):
