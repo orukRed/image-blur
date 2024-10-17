@@ -14,12 +14,8 @@ def blur_images(file_paths, blur_strength):
                 blurred_image = img.filter(
                     ImageFilter.GaussianBlur(blur_strength))  # ぼかしの強さは調整可能
 
-                # 保存先のパスを作成
-                directory, filename = os.path.split(file_path)
-                # 現在ディレクトリ+/blurredフォルダに保存する
-                directory = os.path.join(directory, "blurred")
-                os.makedirs(directory, exist_ok=True)
-                save_path = os.path.join(directory, f"{filename}")
+                # 保存先のパスを作成（元のファイルを上書き）
+                save_path = file_path
 
                 # ぼかした画像を保存
                 blurred_image.save(save_path)
@@ -49,12 +45,8 @@ def mosaic_images(file_paths, block_size):
                         # ブロックを平均色で塗りつぶす
                         img.paste(avg_color, box)
 
-                # 保存先のパスを作成
-                directory, filename = os.path.split(file_path)
-                # 現在ディレクトリ+/mosaicフォルダに保存する
-                directory = os.path.join(directory, "mosaic")
-                os.makedirs(directory, exist_ok=True)
-                save_path = os.path.join(directory, f"{filename}")
+                # 保存先のパスを作成（元のファイルを上書き）
+                save_path = file_path
 
                 # モザイク処理した画像を保存
                 img.save(save_path)
@@ -79,7 +71,8 @@ def open_files(blur_strength, block_size, process_type, file_paths=None):
 
 def drop(event, blur_strength, block_size, process_type):
     """ドラッグアンドドロップされたファイルを処理する"""
-    file_paths = event.data.split()
+    # ファイルパスの波括弧を削除し、エスケープシーケンスを正しく処理
+    file_paths = [path.strip('{}') for path in event.data.split()]
     open_files(blur_strength, block_size, process_type, file_paths)
 
 
