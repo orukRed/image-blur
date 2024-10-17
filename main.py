@@ -1,8 +1,8 @@
-import tkinter as tk
-from tkinter import filedialog
-from tkinterdnd2 import TkinterDnD, DND_FILES
 from PIL import Image, ImageFilter
 import os
+import tkinter as tk
+from tkinter import filedialog, messagebox
+from tkinterdnd2 import TkinterDnD, DND_FILES
 
 
 def blur_images(file_paths, blur_strength):
@@ -14,12 +14,8 @@ def blur_images(file_paths, blur_strength):
                 blurred_image = img.filter(
                     ImageFilter.GaussianBlur(blur_strength))  # ぼかしの強さは調整可能
 
-                # 保存先のパスを作成
-                directory, filename = os.path.split(file_path)
-                # 現在ディレクトリ+/blurredフォルダに保存する
-                directory = os.path.join(directory, "blurred")
-                os.makedirs(directory, exist_ok=True)
-                save_path = os.path.join(directory, f"{filename}")
+                # 保存先のパスを作成（元のファイルを上書き）
+                save_path = file_path
 
                 # ぼかした画像を保存
                 blurred_image.save(save_path)
@@ -49,12 +45,8 @@ def mosaic_images(file_paths, block_size):
                         # ブロックを平均色で塗りつぶす
                         img.paste(avg_color, box)
 
-                # 保存先のパスを作成
-                directory, filename = os.path.split(file_path)
-                # 現在ディレクトリ+/mosaicフォルダに保存する
-                directory = os.path.join(directory, "mosaic")
-                os.makedirs(directory, exist_ok=True)
-                save_path = os.path.join(directory, f"{filename}")
+                # 保存先のパスを作成（元のファイルを上書き）
+                save_path = file_path
 
                 # モザイク処理した画像を保存
                 img.save(save_path)
@@ -64,23 +56,70 @@ def mosaic_images(file_paths, block_size):
             print(f"Error processing {file_path}: {e}")
 
 
-def open_files(blur_strength, block_size, process_type, file_paths=None):
+def resize_images(file_paths, resize_percentage):
+    """指定されたファイルのサイズを変更"""
+    for file_path in file_paths:
+        try:
+            with Image.open(file_path) as img:
+                # 画像サイズを取得
+                width, height = img.size
+                # 新しいサイズを計算
+                new_width = int(width * resize_percentage / 100)
+                new_height = int(height * resize_percentage / 100)
+                # 画像サイズを変更
+                resized_image = img.resize((new_width, new_height))
+
+                # 保存先のパスを作成（元のファイルを上書き）
+                save_path = file_path
+
+                # サイズ変更した画像を保存
+                resized_image.save(save_path)
+                print(f"Saved resized image: {save_path}")
+
+        except Exception as e:
+            print(f"Error processing {file_path}: {e}")
+
+
+def get_all_image_files(directory):
+    """指定されたディレクトリ内のすべての画像ファイルを再帰的に取得"""
+    image_files = []
+    for root, _, files in os.walk(directory):
+        for file in files:
+            if file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff')):
+                image_files.append(os.path.join(root, file))
+    return image_files
+
+
+def open_files(blur_strength, block_size, resize_percentage, process_type, file_paths=None):
     """ファイル選択ダイアログを開いて、画像ファイルを選択する"""
     if not file_paths:
         file_paths = filedialog.askopenfilenames(
             title="画像ファイルを選択してください",
             filetypes=[("Image files", "*.jpg;*.jpeg;*.png;*.bmp;*.tiff")]
         )
-    if process_type == "blur":
-        blur_images(file_paths, blur_strength)
-    elif process_type == "mosaic":
-        mosaic_images(file_paths, block_size)
+    all_files = []
+    for path in file_paths:
+        if os.path.isdir(path):
+            all_files.extend(get_all_image_files(path))
+        else:
+            all_files.append(path)
+
+    # 確認ダイアログを表示
+    if messagebox.askyesno("確認", "破壊的な処理だけど実行する？バックアップとった？"):
+        if process_type == "blur":
+            blur_images(all_files, blur_strength)
+        elif process_type == "mosaic":
+            mosaic_images(all_files, block_size)
+        elif process_type == "resize":
+            resize_images(all_files, resize_percentage)
 
 
-def drop(event, blur_strength, block_size, process_type):
+def drop(event, blur_strength, block_size, resize_percentage, process_type):
     """ドラッグアンドドロップされたファイルを処理する"""
-    file_paths = event.data.split()
-    open_files(blur_strength, block_size, process_type, file_paths)
+    # ファイルパスの波括弧を削除し、エスケープシーケンスを正しく処理
+    file_paths = [path.strip('{}') for path in event.data.split()]
+    open_files(blur_strength, block_size,
+               resize_percentage, process_type, file_paths)
 
 
 def create_gui():
@@ -89,7 +128,7 @@ def create_gui():
     root.title("画像処理ツール")
 
     # ウィンドウサイズを設定
-    root.geometry("300x300")
+    root.geometry("300x400")
 
     # 処理タイプを選択するラジオボタン
     process_type = tk.StringVar(value="blur")
@@ -97,6 +136,8 @@ def create_gui():
                    value="blur").pack()
     tk.Radiobutton(root, text="モザイク", variable=process_type,
                    value="mosaic").pack()
+    tk.Radiobutton(root, text="サイズ変更", variable=process_type,
+                   value="resize").pack()
 
     # ぼかしの強さを設定するスライダー
     tk.Label(root, text="ぼかしの強さ").pack()
@@ -110,14 +151,20 @@ def create_gui():
     tk.Scale(root, from_=1, to_=50, orient=tk.HORIZONTAL,
              variable=block_size).pack()
 
+    # サイズ変更のパーセンテージを設定するスライダー
+    tk.Label(root, text="サイズ変更のパーセンテージ").pack()
+    resize_percentage = tk.IntVar(value=100)
+    tk.Scale(root, from_=1, to_=200, orient=tk.HORIZONTAL,
+             variable=resize_percentage).pack()
+
     # 画像選択ボタン
     tk.Button(root, text="画像を選択", command=lambda: open_files(
-        blur_strength.get(), block_size.get(), process_type.get())).pack(expand=True)
+        blur_strength.get(), block_size.get(), resize_percentage.get(), process_type.get())).pack(expand=True)
 
     # ドラッグアンドドロップの設定
     root.drop_target_register(DND_FILES)
     root.dnd_bind('<<Drop>>', lambda event: drop(
-        event, blur_strength.get(), block_size.get(), process_type.get()))
+        event, blur_strength.get(), block_size.get(), resize_percentage.get(), process_type.get()))
 
     # GUIのメインループを開始
     root.mainloop()
