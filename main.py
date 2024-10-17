@@ -80,6 +80,16 @@ def resize_images(file_paths, resize_percentage):
             print(f"Error processing {file_path}: {e}")
 
 
+def get_all_image_files(directory):
+    """指定されたディレクトリ内のすべての画像ファイルを再帰的に取得"""
+    image_files = []
+    for root, _, files in os.walk(directory):
+        for file in files:
+            if file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff')):
+                image_files.append(os.path.join(root, file))
+    return image_files
+
+
 def open_files(blur_strength, block_size, resize_percentage, process_type, file_paths=None):
     """ファイル選択ダイアログを開いて、画像ファイルを選択する"""
     if not file_paths:
@@ -87,12 +97,19 @@ def open_files(blur_strength, block_size, resize_percentage, process_type, file_
             title="画像ファイルを選択してください",
             filetypes=[("Image files", "*.jpg;*.jpeg;*.png;*.bmp;*.tiff")]
         )
+    all_files = []
+    for path in file_paths:
+        if os.path.isdir(path):
+            all_files.extend(get_all_image_files(path))
+        else:
+            all_files.append(path)
+
     if process_type == "blur":
-        blur_images(file_paths, blur_strength)
+        blur_images(all_files, blur_strength)
     elif process_type == "mosaic":
-        mosaic_images(file_paths, block_size)
+        mosaic_images(all_files, block_size)
     elif process_type == "resize":
-        resize_images(file_paths, resize_percentage)
+        resize_images(all_files, resize_percentage)
 
 
 def drop(event, blur_strength, block_size, resize_percentage, process_type):
