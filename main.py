@@ -151,20 +151,19 @@ def create_gui():
     tk.Scale(root, from_=1, to_=50, orient=tk.HORIZONTAL,
              variable=block_size).pack()
 
-    # サイズ変更のパーセンテージを設定するスライダー
+    # サイズ変更のパーセンテージを設定するテキストボックス
     tk.Label(root, text="サイズ変更のパーセンテージ").pack()
-    resize_percentage = tk.IntVar(value=100)
-    tk.Scale(root, from_=1, to_=200, orient=tk.HORIZONTAL,
-             variable=resize_percentage).pack()
+    resize_percentage = tk.StringVar(value="50")
+    tk.Entry(root, textvariable=resize_percentage).pack()
 
     # 画像選択ボタン
     tk.Button(root, text="画像を選択", command=lambda: open_files(
-        blur_strength.get(), block_size.get(), resize_percentage.get(), process_type.get())).pack(expand=True)
+        blur_strength.get(), block_size.get(), int(resize_percentage.get()), process_type.get())).pack(expand=True)
 
     # ドラッグアンドドロップの設定
     root.drop_target_register(DND_FILES)
     root.dnd_bind('<<Drop>>', lambda event: drop(
-        event, blur_strength.get(), block_size.get(), resize_percentage.get(), process_type.get()))
+        event, blur_strength.get(), block_size.get(), int(resize_percentage.get()), process_type.get()))
 
     # GUIのメインループを開始
     root.mainloop()
